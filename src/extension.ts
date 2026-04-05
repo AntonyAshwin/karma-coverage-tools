@@ -75,6 +75,14 @@ export function activate(context: vscode.ExtensionContext) {
   watcher.onDidDelete(() => scanForKarmaConfig());
   context.subscriptions.push(watcher);
 
+  // Watch for configuration changes (manual path setting)
+  vscode.workspace.onDidChangeConfiguration(event => {
+    if (event.affectsConfiguration('karmaCoverage.karmaConfigPath')) {
+      console.log('Karma config path setting changed, re-scanning...');
+      scanForKarmaConfig();
+    }
+  }, null, context.subscriptions);
+
   // Update decorations when active editor changes
   vscode.window.onDidChangeActiveTextEditor(editor => {
     if (editor && workspaceRoot) {
@@ -98,7 +106,23 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function scanForKarmaConfig() {
   try {
-    const configUris = await detector.findKarmaConfigs();
+    // Check if user has specified a manual config path
+    const manualPath = vscode.workspace.getConfiguration('karmaCoverage').get<string>('karmaConfigPath', '');
+
+    let configUris: vscode.Uri[];
+
+    if (manualPath) {
+      console.log(`Using manual karma config path: ${manualPath}`);
+      configUris = await detector.findKarmaConfigFromPath(manualPath);
+
+      if (configUris.length === 0) {
+        console.warn(`Manual karma config path not found: ${manualPath}. Falling back to auto-detection.`);
+        configUris = await detector.findKarmaConfigs();
+      }
+    } else {
+      // Auto-detect if no manual path specified
+      configUris = await detector.findKarmaConfigs();
+    }
 
     if (configUris.length === 0) {
       statusBar.update('inactive');

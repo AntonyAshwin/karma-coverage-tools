@@ -12,6 +12,43 @@ export class KarmaConfigDetector {
   }
 
   /**
+   * Find karma config from a specified path
+   * @param configPath Path to the karma config file (can be absolute or relative to workspace root)
+   * @returns Array with single URI or empty array if not found
+   */
+  public async findKarmaConfigFromPath(configPath: string): Promise<vscode.Uri[]> {
+    if (!configPath || configPath.trim() === '') {
+      return [];
+    }
+
+    if (!this.workspaceRoot) {
+      return [];
+    }
+
+    try {
+      let fullPath: string;
+
+      // Check if path is absolute, otherwise treat as relative to workspace root
+      if (path.isAbsolute(configPath)) {
+        fullPath = configPath;
+      } else {
+        fullPath = path.join(this.workspaceRoot, configPath);
+      }
+
+      // Check if file exists
+      if (fs.existsSync(fullPath)) {
+        return [vscode.Uri.file(fullPath)];
+      } else {
+        console.warn(`Karma config path not found: ${configPath} (resolved to ${fullPath})`);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error resolving karma config path:', error);
+      return [];
+    }
+  }
+
+  /**
    * Find all *conf.js files in the workspace (karma configs)
    */
   public async findKarmaConfigs(): Promise<vscode.Uri[]> {
@@ -66,8 +103,16 @@ export class KarmaConfigDetector {
           if (moduleName === 'path') {
             return path;
           }
-          // For other requires in karma config, return empty function
-          return () => {};
+          // Handle puppeteer - provide mock executablePath
+          if (moduleName === 'puppeteer') {
+            return {
+              executablePath: () => '/usr/bin/chromium'
+            };
+          }
+          // For other requires in karma config, return mock object with common methods
+          return {
+            executablePath: () => '/usr/bin/chromium'
+          };
         },
         console,
         process,
