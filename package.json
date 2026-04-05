@@ -52,7 +52,21 @@
         "title": "Karma Coverage: Run Tests",
         "icon": "$(run)"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Karma Coverage Tools",
+      "properties": {
+        "karmaCoverage.karmaConfigPath": {
+          "type": "string",
+          "description": "Path to karma configuration file. Relative to workspace root. If provided, overrides automatic detection. Example: karma.conf.js or path/to/karma.conf.js",
+          "default": "",
+          "examples": [
+            "karma.conf.js",
+            "packages/my-app/karma.conf.js"
+          ]
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
